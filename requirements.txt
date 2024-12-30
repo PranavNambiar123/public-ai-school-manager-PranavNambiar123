@@ -9,7 +9,6 @@ tiktoken>=0.5.2
 aiohttp>=3.9.1
 requests>=2.31.0
 langgraph>=0.0.20
-python-magic-bin>=0.4.14
 tree-sitter>=0.20.4
 radon>=6.0.1
 pylint>=3.0.3
