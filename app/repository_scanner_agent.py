@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Set
 import os
 import pathlib
-import magic
+import file_magic
 import logging
 from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor
@@ -32,7 +32,7 @@ class RepositoryScannerAgent:
         """
         self.base_path = os.path.abspath(base_path)
         self.size_threshold = size_threshold
-        self.mime = magic.Magic(mime=True)
+        self.mime = file_magic.Magic(mime=True)
         self.ignored_dirs = {'.git', 'node_modules', 'venv', '__pycache__', '.idea', '.vscode'}
         self.important_file_patterns = {'README', 'LICENSE', 'requirements.txt', 'setup.py', 
                                       'package.json', 'Dockerfile', '.gitignore'}

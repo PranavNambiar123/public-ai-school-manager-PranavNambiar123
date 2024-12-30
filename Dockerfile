@@ -18,9 +18,6 @@ COPY ./package[s] ./packages
 
 RUN poetry install  --no-interaction --no-ansi --no-root
 
-# Install python-magic for file type detection
-RUN pip install python-magic
-
 COPY ./app ./app
 
 RUN poetry install --no-interaction --no-ansi
