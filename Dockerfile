@@ -1,5 +1,10 @@
 FROM python:3.11-slim
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libmagic1 \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN pip install poetry==1.6.1
 
 RUN poetry config virtualenvs.create false
@@ -11,6 +16,9 @@ COPY ./pyproject.toml ./README.md ./poetry.lock* ./
 COPY ./package[s] ./packages
 
 RUN poetry install  --no-interaction --no-ansi --no-root
+
+# Install python-magic-bin specifically for Windows compatibility
+RUN pip install python-magic-bin
 
 COPY ./app ./app
 
