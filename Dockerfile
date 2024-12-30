@@ -1,5 +1,10 @@
 FROM python:3.11-slim
 
+# Install git for GitPython
+RUN apt-get update && apt-get install -y \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN pip install poetry==1.6.1
 
 RUN poetry config virtualenvs.create false
