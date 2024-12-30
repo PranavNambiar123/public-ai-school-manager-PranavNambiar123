@@ -1,7 +1,6 @@
 from typing import Dict, List, Optional, Set
 import os
 import pathlib
-import magic
 import logging
 from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor
@@ -20,7 +19,7 @@ class RepoStructure:
     important_files: List[str]
 
 class RepositoryScannerAgent:
-    """Agent responsible for scanning and analyzing repository structure"""
+    """Agent responsible for scanning repository contents"""
     
     def __init__(self, base_path: str, size_threshold: int = 1024 * 1024):
         """
@@ -32,7 +31,6 @@ class RepositoryScannerAgent:
         """
         self.base_path = os.path.abspath(base_path)
         self.size_threshold = size_threshold
-        self.mime = magic.Magic(mime=True)
         self.ignored_dirs = {'.git', 'node_modules', 'venv', '__pycache__', '.idea', '.vscode'}
         self.important_file_patterns = {'README', 'LICENSE', 'requirements.txt', 'setup.py', 
                                       'package.json', 'Dockerfile', '.gitignore'}
@@ -70,7 +68,7 @@ class RepositoryScannerAgent:
                     file_count += 1
                     
                     # Check file type
-                    file_type = self._get_file_type(file_path)
+                    file_type = pathlib.Path(file_path).suffix or 'unknown'
                     file_types[file_type] = file_types.get(file_type, 0) + 1
                     
                     # Check for large files
@@ -78,7 +76,7 @@ class RepositoryScannerAgent:
                         large_files.append(rel_path)
                     
                     # Check for binary files
-                    if self._is_binary(file_path):
+                    if file_type not in ['.txt', '.json', '.xml', '.py', '.md']:
                         binary_files.append(rel_path)
                     
                     # Check for important files
@@ -118,7 +116,8 @@ class RepositoryScannerAgent:
         if os.path.getsize(abs_path) > max_size:
             return None
             
-        if self._is_binary(abs_path):
+        file_type = pathlib.Path(abs_path).suffix
+        if file_type not in ['.txt', '.json', '.xml', '.py', '.md']:
             return None
             
         try:
@@ -127,22 +126,6 @@ class RepositoryScannerAgent:
         except Exception as e:
             logging.warning(f"Error reading file {abs_path}: {str(e)}")
             return None
-    
-    def _get_file_type(self, file_path: str) -> str:
-        """Determine file type using file extension and mime type"""
-        try:
-            mime_type = self.mime.from_file(file_path)
-            return mime_type
-        except:
-            return pathlib.Path(file_path).suffix or 'unknown'
-    
-    def _is_binary(self, file_path: str) -> bool:
-        """Check if a file is binary"""
-        try:
-            mime_type = self.mime.from_file(file_path)
-            return not mime_type.startswith(('text/', 'application/json', 'application/xml'))
-        except:
-            return True  # Assume binary if we can't determine
     
     @tool
     def get_directory_structure(self, max_depth: int = 3) -> Dict:
