@@ -2,6 +2,8 @@ from typing import Dict, List, Optional, Set, Union
 import os
 import ast
 import logging
+import tempfile
+from git import Repo
 from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor
 from langchain_core.tools import tool
@@ -55,15 +57,32 @@ class FileAnalysis:
 class CodeAnalyzerAgent:
     """Agent responsible for deep code analysis"""
     
-    def __init__(self, base_path: str):
+    def __init__(self, repo_url: str):
         """
         Initialize the Code Analyzer Agent
         
         Args:
-            base_path: Root path of the repository
+            repo_url: URL of the GitHub repository to analyze
         """
-        self.base_path = os.path.abspath(base_path)
+        self.repo_url = repo_url
+        self.base_path = self._clone_repository()
         self.parser = self._setup_parser()
+    
+    def _clone_repository(self) -> str:
+        """Clone the GitHub repository to a temporary directory"""
+        temp_dir = tempfile.mkdtemp()
+        try:
+            Repo.clone_from(self.repo_url, temp_dir)
+            return temp_dir
+        except Exception as e:
+            logging.error(f"Error cloning repository {self.repo_url}: {str(e)}")
+            raise
+
+    def _cleanup(self):
+        """Clean up temporary directory"""
+        import shutil
+        if os.path.exists(self.base_path):
+            shutil.rmtree(self.base_path)
         
     def _setup_parser(self) -> Parser:
         """Setup tree-sitter parser"""
@@ -199,14 +218,15 @@ class CodeAnalyzerAgent:
     
     def _get_code_issues(self, file_path: str) -> List[str]:
         """Run pylint and get code issues"""
+        abs_path = os.path.join(self.base_path, file_path)
         try:
             (pylint_stdout, pylint_stderr) = epylint.py_run(
-                f'"{file_path}" --output-format=text --score=n --msg-template="{{line}}: {{msg}}"',
+                f'"{abs_path}" --output-format=text --score=n --msg-template="{{line}}: {{msg}}"',
                 return_std=True
             )
             return [line.strip() for line in pylint_stdout.readlines() if line.strip()]
         except Exception as e:
-            logging.warning(f"Error running pylint on {file_path}: {str(e)}")
+            logging.warning(f"Error running pylint on {abs_path}: {str(e)}")
             return []
     
     @tool
