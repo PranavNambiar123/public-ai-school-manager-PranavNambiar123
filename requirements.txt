@@ -18,5 +18,3 @@ networkx>=3.2.1
 docstring-parser>=0.15
 sentence-transformers>=2.2.2
 nltk>=3.8.1
-python-magic>=0.4.27
-python-magic-bin>=0.4.14
