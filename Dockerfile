@@ -16,7 +16,8 @@ COPY ./pyproject.toml ./README.md ./poetry.lock* ./
 
 COPY ./package[s] ./packages
 
-RUN poetry install  --no-interaction --no-ansi --no-root
+# Install dependencies for Linux environment
+RUN poetry install --no-interaction --no-ansi --no-root
 
 COPY ./app ./app
 
