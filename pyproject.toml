@@ -20,6 +20,7 @@ langchain_experimental = "^0.0.60"
 langgraph = "^0.0.66"
 langchain = "^0.2.3"
 gitpython = "^3.1.40"
+radon = "^6.0.1"
 
 [tool.poetry.group.dev.dependencies]
 langchain-cli = ">=0.0.15"

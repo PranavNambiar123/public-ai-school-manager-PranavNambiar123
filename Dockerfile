@@ -15,7 +15,9 @@ COPY ./pyproject.toml ./README.md ./poetry.lock* ./
 
 COPY ./package[s] ./packages
 
-RUN poetry install --no-interaction --no-ansi --no-root
+# Install dependencies from requirements.txt
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
 COPY ./app ./app
 
