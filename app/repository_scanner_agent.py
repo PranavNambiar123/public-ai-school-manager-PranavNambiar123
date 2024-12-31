@@ -21,7 +21,7 @@ class RepoStructure:
 class RepositoryScannerAgent:
     """Agent responsible for scanning repository contents"""
     
-    def __init__(self, base_path: str, size_threshold: int = 1024 * 1024):
+    def __init__(self, base_path: str = "/home/pranav/Code/public-ai-school-manager-PranavNambiar123", size_threshold: int = 1024 * 1024):
         """
         Initialize the Repository Scanner Agent
         
@@ -36,6 +36,7 @@ class RepositoryScannerAgent:
                                       'package.json', 'Dockerfile', '.gitignore'}
         
     @tool
+    @staticmethod
     def scan_repository(self) -> RepoStructure:
         """
         Perform a complete scan of the repository
@@ -98,6 +99,7 @@ class RepositoryScannerAgent:
         )
     
     @tool
+    @staticmethod
     def get_file_content(self, file_path: str, max_size: int = 1_000_000) -> Optional[str]:
         """
         Safely read and return file content
@@ -128,6 +130,7 @@ class RepositoryScannerAgent:
             return None
     
     @tool
+    @staticmethod
     def get_directory_structure(self, max_depth: int = 3) -> Dict:
         """
         Get a hierarchical view of the repository structure

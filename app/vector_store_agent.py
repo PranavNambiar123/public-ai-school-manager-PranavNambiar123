@@ -4,6 +4,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_openai import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.docstore.document import Document
+from langchain_core.tools import tool
 
 class VectorStoreAgent:
     def __init__(self, persist_directory: str):
@@ -30,21 +31,29 @@ class VectorStoreAgent:
                 embedding_function=self.embeddings
             )
             
+    @tool
+    @staticmethod
     def add_texts(self, texts: List[str], metadatas: Optional[List[Dict]] = None):
         """Add texts to the vector store"""
         documents = self.text_splitter.create_documents(texts, metadatas)
         self.vector_store.add_documents(documents)
         self.vector_store.persist()
         
+    @tool
+    @staticmethod
     def add_file(self, file_path: str, content: str):
         """Add a single file to the vector store"""
         metadata = {"source": file_path}
         self.add_texts([content], [metadata])
         
+    @tool
+    @staticmethod
     def similarity_search(self, query: str, k: int = 4) -> List[Document]:
         """Search for similar documents"""
         return self.vector_store.similarity_search(query, k=k)
     
+    @tool
+    @staticmethod
     def similarity_search_with_score(self, query: str, k: int = 4):
         """Search for similar documents with relevance scores"""
         return self.vector_store.similarity_search_with_score(query, k=k)

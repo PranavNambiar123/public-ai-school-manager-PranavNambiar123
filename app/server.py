@@ -1,7 +1,8 @@
 from fastapi.responses import RedirectResponse
 from langserve import add_routes
-from app.agent_supervisor import AgentSupervisor
+from app.agent_sup import graph
 from fastapi import FastAPI
+from langchain_core.tools import tool
 
 app = FastAPI()
 
@@ -9,8 +10,6 @@ app = FastAPI()
 async def redirect_root_to_docs():
     return RedirectResponse("/docs")
 
-agent_supervisor = AgentSupervisor(base_path=".")
-graph = agent_supervisor.workflow
 # Add routes for the graph
 add_routes(app, graph, enable_feedback_endpoint=True)
 

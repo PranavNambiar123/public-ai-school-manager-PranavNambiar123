@@ -1,8 +1,8 @@
-langchain>=0.1.0
-langchain-core>=0.1.0
-langchain-openai>=0.0.2
-langchain-community>=0.0.12
-langchain-experimental>=0.0.43
+langchain==0.1.7
+langchain-core==0.1.23
+langchain-openai==0.0.2
+langchain-community==0.0.20
+langchain-experimental==0.0.51
 chromadb>=0.4.22
 openai>=1.6.1
 tiktoken>=0.5.2

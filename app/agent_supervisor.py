@@ -10,7 +10,7 @@ from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.output_parsers.openai_functions import JsonOutputFunctionsParser
+from langchain_core.output_parsers import StrOutputParser
 from langgraph.graph import StateGraph, END
 
 from .vector_store_agent import VectorStoreAgent
@@ -99,8 +99,9 @@ class AgentSupervisor:
             self.vector_store.initialize_store()
             
             # Process important files
-            await self._process_important_files(repo_structure.important_files)
-            
+            if repo_structure.important_files:
+                await self._process_important_files(repo_structure.important_files)
+                
         except Exception as e:
             logging.error(f"Error initializing repository: {str(e)}")
             raise
@@ -195,18 +196,77 @@ class AgentSupervisor:
         }
         return response
     
+    def route(self, state: AgentState) -> Dict[str, Any]:
+        """Route the query to appropriate agents"""
+        return {"next": "SCAN"}
+    
+    def scan(self, state: AgentState) -> Dict[str, Any]:
+        """Scan the repository"""
+        return {"next": "ANALYZE"}
+    
+    def analyze(self, state: AgentState) -> Dict[str, Any]:
+        """Analyze the code"""
+        return {"next": "DOCUMENT"}
+    
+    def document(self, state: AgentState) -> Dict[str, Any]:
+        """Process documentation"""
+        return {"next": "SEARCH"}
+    
+    def search(self, state: AgentState) -> Dict[str, Any]:
+        """Search the vector store"""
+        return {"next": "FINISH"}
+    
+    def supervisor(self, state: AgentState) -> Dict[str, Any]:
+        """Supervise the workflow"""
+        return {"next": state.next}
+    
+    def git_repo(self, state: AgentState) -> Dict[str, Any]:
+        """Read repository from git"""
+        return {"next": "DOC_REPO"}
+    
+    def doc_repo(self, state: AgentState) -> Dict[str, Any]:
+        """Process documentation repository"""
+        return {"next": "VECTOR_REPO"}
+    
+    def vector_repo(self, state: AgentState) -> Dict[str, Any]:
+        """Process vector repository"""
+        return {"next": "QUERY_ROUTER"}
+    
+    def query_router(self, state: AgentState) -> Dict[str, Any]:
+        """Process query router repository"""
+        return {"next": "SCAN"}
+    
     def _create_workflow_graph(self) -> StateGraph:
         """Create the agent workflow graph"""
-        workflow = StateGraph()
+        workflow = StateGraph(state_schema=AgentState)
+        
+        # Add supervisor node first
+        workflow.add_node("supervisor", self.supervisor)
         
         # Add nodes for each agent type
-        members = ["ROUTE", "SCAN", "ANALYZE", "DOCUMENT", "SEARCH"]
-        for member in members:
-            workflow.add_node(member, getattr(self, member.lower()).__call__)
+        members = [
+            "ROUTE", 
+            "GIT_REPO",        # Read repository from git
+            "DOC_REPO",        # Documentation repository
+            "VECTOR_REPO",     # Vector repository
+            "QUERY_ROUTER",    # Query router repository
+            "SCAN", 
+            "ANALYZE", 
+            "DOCUMENT", 
+            "SEARCH"
+        ]
         
-        # Define edges
         for member in members:
-            workflow.add_edge(member, "supervisor")
+            workflow.add_node(member, getattr(self, member.lower()))
+        
+        # Define edges from supervisor to agents
+        for member in members:
+            workflow.add_edge("supervisor", member)
+        
+        # Define repository flow
+        workflow.add_edge("GIT_REPO", "DOC_REPO")
+        workflow.add_edge("DOC_REPO", "VECTOR_REPO")
+        workflow.add_edge("VECTOR_REPO", "QUERY_ROUTER")
         
         # Define conditional edges
         conditional_map = {k: k for k in members}
