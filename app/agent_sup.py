@@ -16,15 +16,19 @@ from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_core.tools import tool
 from langchain_experimental.tools import PythonREPLTool
 from langgraph.graph import StateGraph, END
-from .vector_store_agent import VectorStoreAgent
-from .repository_scanner_agent import RepositoryScannerAgent
+from .vector_store_agent import vector_store, text_splitter, add_texts, add_file, similarity_search, similarity_search_with_score, initialize_store
+from .repository_scanner_agent import scan_repository, get_file_content, get_directory_structure 
 from .code_analyzer_agent import CodeAnalyzerAgent
-from .documentation_agent import DocumentationAgent
-from .query_router_agent import QueryRouterAgent
+from .documentation_agent import analyze_documentation, generate_documentation
+from .query_router_agent import answer_query
 
 # Step 2: Define tools
 # Here, define any tools the agents might use. Example given:
-import os
+# Set env variables for tracking
+# LANGCHAIN_API_KEY
+# LANGCHAIN_PROJECT
+# LANGCHAIN_TRACING_V2
+# OPENAI_API_KEY
 
 # This tool executes code locally, which can be unsafe. Use with caution:
 python_repl_tool = PythonREPLTool()
@@ -71,17 +75,16 @@ def analyze_code_style(code: str) -> str:
 # Step 3: Define the system prompt for the supervisor agent
 # Customize the members list as needed.
 members = [
-    "CodeAnalyzer", "VectorStore", "Documentation", "Repository", "QueryRouter"
+    "CodeAnalyzer", "VectorStore", "Documentation", "QueryRouter"
 ]
 
-system_prompt = f"""
-You are the supervisor of a team of {', '.join(members)}.
-You are responsible for coordinating the team to complete tasks efficiently.
-You have the following members: {', '.join(members)}.
-Each worker will perform their assigned task and provide results.
-You will analyze their output and decide the next step or finish when the task is complete.
-When all required work is done, respond with FINISH.
-"""
+system_prompt = f"""You are the supervisor agent coordinating a team of specialized agents:
+- CodeAnalyzer: Reads the repository and responds with the file contents in it
+- VectorStore: Stores the code embeddings and generates a vector store
+- Documentation: Handles documentation tasks
+- QueryRouter: Uses the vector store to answer queries. Vector store must be initialized before invoking this agent
+
+Route tasks to the most suitable agent. Only use available agents."""
 
 # Step 4: Define options for the supervisor to choose from
 options = members + ["FINISH"]
@@ -113,7 +116,7 @@ prompt = ChatPromptTemplate.from_messages(
 
 # Step 7: Initialize the language model
 # Choose the model you need, e.g., "gpt-4o"
-llm = ChatOpenAI(model="gpt-4")
+llm = ChatOpenAI(model="gpt-4o")
 
 # Step 8: Create the supervisor chain
 # Define how the supervisor chain will process messages.
@@ -204,97 +207,47 @@ code_analyzer_agent = create_agent(
 )
 code_analyzer_node = functools.partial(agent_node, agent=code_analyzer_agent, name="CodeAnalyzer")
 
-vector_store = VectorStoreAgent(persist_directory="./vector_store")
-vector_store.initialize_store()
-
 vector_store_agent = create_agent(
     llm,
     [
-        vector_store.add_texts,
-        vector_store.add_file,
-        vector_store.similarity_search,
-        vector_store.similarity_search_with_score
+        add_texts,
+        add_file,
+        similarity_search,
+        similarity_search_with_score
     ],
-    """You are a vector store specialist managing code embeddings and similarity search.
-    Your responsibilities:
-    - Index and store code content using embeddings
-    - Perform semantic similarity searches
-    - Handle efficient document retrieval
-    - Manage document metadata
-    - Maintain vector store persistence
-    
-    You have access to these tools:
-    - add_texts: Add multiple texts with optional metadata to the vector store
-    - add_file: Add a single file with its content to the vector store
-    - similarity_search: Find similar documents based on semantic meaning
-    - similarity_search_with_score: Find similar documents with relevance scores
-    
-    Focus on providing accurate and relevant search results while maintaining data integrity."""
+    """You are a vector store agent responsible for storing and retrieving code embeddings from a central vector store."""
 )
 vector_store_node = functools.partial(agent_node, agent=vector_store_agent, name="VectorStore")
 
-documentation_agent_impl = DocumentationAgent(base_path=".")
 documentation_agent = create_agent(
     llm,
     [
-        documentation_agent_impl.analyze_documentation,
-        documentation_agent_impl.generate_documentation
+        analyze_documentation,
+        generate_documentation,
     ],
-    """You are a technical documentation specialist.
-    Your responsibilities:
-    - Analyze existing documentation for quality and coverage
-    - Generate comprehensive documentation for code files
-    - Create clear API documentation with examples
-    - Track documentation relationships in knowledge graphs
-    - Provide actionable improvement suggestions
-    
-    You have access to these tools:
-    - analyze_documentation: Analyze documentation quality, coverage, and provide improvement suggestions
-    - generate_documentation: Create new documentation in markdown or RST format with structure, examples, and API details
-    
-    Focus on maintaining high-quality, comprehensive documentation that follows best practices."""
+    """Documentation specialist generating clear technical documentation.
+    Tasks: Create READMEs, docstrings, API docs."""
 )
 documentation_node = functools.partial(agent_node, agent=documentation_agent, name="Documentation")
 
-repo_scanner = RepositoryScannerAgent(base_path=".")
 repository_agent = create_agent(
     llm,
     [
-        repo_scanner.scan_repository,
-        repo_scanner.get_file_content,
-        repo_scanner.get_directory_structure
+        scan_repository,
+        get_file_content,
+        get_directory_structure
     ],
-    """You are a repository management specialist.
-    Your responsibilities:
-    - Analyze repository structure and organization
-    - Monitor file sizes and types
-    - Identify important repository files
-    - Track binary and large files
-    - Provide repository health insights
-    
-    You have access to these tools:
-    - scan_repository: Perform complete repository analysis including file counts, sizes, and types
-    - get_file_content: Safely retrieve content of text-based files
-    - get_directory_structure: Get hierarchical view of repository structure
-    
-    Focus on maintaining repository organization and providing insights about repository health."""
+    """You can read repositories, get directory structure and read file content and respond with the same. Do not respond with queries regarding the content, only respond with the content."""
 )
 repository_node = functools.partial(agent_node, agent=repository_agent, name="Repository")
 
-query_router = QueryRouterAgent(persist_directory="./vector_store")
 query_router_agent = create_agent(
     llm,
     [
-        query_router.answer_query,
+        answer_query
     ],
-    """You are a query routing specialist.
-    Your responsibilities:
-    - Answer a query using RAG
-    
-    You have access to these tools:
-    - answer_query: Answer a query using RAG
-    
-    Focus on intelligent query routing and efficient response aggregation."""
+    """You are a query response agent which given a query uses the vector store generated by the vector store agent to answer the queries.
+    Tasks: Process queries, retrieve context, generate responses."""
 )
 query_router_node = functools.partial(agent_node, agent=query_router_agent, name="QueryRouter")
 
@@ -302,10 +255,10 @@ query_router_node = functools.partial(agent_node, agent=query_router_agent, name
 # Add nodes and their corresponding functions to the workflow.
 workflow = StateGraph(AgentState)
 workflow.add_node("supervisor", supervisor_chain)
-workflow.add_node("CodeAnalyzer", code_analyzer_node)
+workflow.add_node("CodeAnalyzer", repository_node)
 workflow.add_node("VectorStore", vector_store_node)
 workflow.add_node("Documentation", documentation_node)
-workflow.add_node("Repository", repository_node)
+# workflow.add_node("Repository", repository_node)
 workflow.add_node("QueryRouter", query_router_node)
 
 # Step 14: Add edges to the workflow

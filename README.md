@@ -1,5 +1,13 @@
 # Final Project
 
+## What this project does?
+
+This project is an intelligent document analysis system that combines multi-agent architecture with advanced retrieval capabilities. It leverages a supervisor agent, vector database, and RAG (Retrieval Augmented Generation) to automatically scan, index, and provide detailed answers to queries about any GitHub repository.
+
+Demo video: https://drive.google.com/file/d/1OElIlY_fRvy7PRk001M3dCvb8d0M6hsH/view?usp=sharing
+
+![Diagram of the system](flowchart.png)
+
 ## Objective
 Build a prototype of an agentic system to be used inside your company. You can utilize graphs, agents, or multi-agent systems.
 

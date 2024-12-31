@@ -6,6 +6,11 @@ from langchain.callbacks.tracers.langchain import LangChainTracer
 from langchain.callbacks.manager import CallbackManager
 
 # Set up environment variables for tracking
+# Set environment variables for tracking
+# LANGCHAIN_API_KEY
+# LANGCHAIN_PROJECT
+# LANGCHAIN_TRACING_V2
+# OPENAI_API_KEY
 
 async def main():    
     # Set up LangChain tracing
@@ -18,12 +23,12 @@ async def main():
     state = {
         "messages": [{
             "role": "user",
-            "content": "Explain what is the difference between agent_sup and agent?",
+            "content": "Find out and read only server.py file from the repository and store it in the vector store.",
             "name": "user"
         }],
         "current_agent": "supervisor",
         "callbacks": callback_manager,
-        "input": "What are the main components of the codebase?"
+        "input": "Find out and read only server.py file from the repository and store it in the vector store."
     }
     
     try:
