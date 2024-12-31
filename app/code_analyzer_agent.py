@@ -9,7 +9,8 @@ from concurrent.futures import ThreadPoolExecutor
 from langchain_core.tools import tool
 import radon.complexity as radon_cc
 import radon.metrics as radon_metrics
-from pylint import epylint
+from pylint.lint import Run
+from pylint.reporters import JSONReporter
 from tree_sitter import Language, Parser
 
 @dataclass
@@ -218,16 +219,18 @@ class CodeAnalyzerAgent:
     
     def _get_code_issues(self, file_path: str) -> List[str]:
         """Run pylint and get code issues"""
-        abs_path = os.path.join(self.base_path, file_path)
+        issues = []
         try:
-            (pylint_stdout, pylint_stderr) = epylint.py_run(
-                f'"{abs_path}" --output-format=text --score=n --msg-template="{{line}}: {{msg}}"',
-                return_std=True
-            )
-            return [line.strip() for line in pylint_stdout.readlines() if line.strip()]
+            reporter = JSONReporter()
+            Run([file_path], reporter=reporter, do_exit=False)
+            
+            for message in reporter.messages:
+                issues.append(f"{message['type']} ({message['symbol']}): {message['message']} at line {message['line']}")
+                
         except Exception as e:
-            logging.warning(f"Error running pylint on {abs_path}: {str(e)}")
-            return []
+            logging.error(f"Error running pylint: {str(e)}")
+            
+        return issues
     
     @tool
     def get_complexity_report(self, file_path: str) -> Dict[str, Union[float, List[Dict]]]:
