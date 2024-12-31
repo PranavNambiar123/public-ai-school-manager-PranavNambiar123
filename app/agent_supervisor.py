@@ -47,7 +47,7 @@ class AgentSupervisor:
         
         # Initialize specialized agents
         self.repo_scanner = RepositoryScannerAgent(base_path)
-        self.code_analyzer = CodeAnalyzerAgent(base_path)
+        self.code_analyzer = CodeAnalyzerAgent("https://github.com/PranavNambiar123/public-ai-school-manager-PranavNambiar123")
         self.documentation = DocumentationAgent(base_path)
         self.vector_store = VectorStoreAgent(f"{base_path}/.vector_store")
         self.query_router = QueryRouterAgent(base_path)
